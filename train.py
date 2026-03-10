@@ -13,7 +13,7 @@ model = AutoModelForCausalLM.from_pretrained(
 
 # 初级训练配置对象，设置各种训练超参数
 train_args = SFTConfig(
-    per_device_train_batch_size=2,          # 每个设备上训练的批次大小
+    per_device_train_batch_size=8,          # 每个设备上训练的批次大小
     gradient_accumulation_steps=4,          # 梯度累积步数
     max_steps=100,                          # 最大训练步数
     learning_rate=2e-4,                     # 学习率
