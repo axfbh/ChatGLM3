@@ -1,3 +1,4 @@
+import torch
 from modelscope import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 
@@ -7,9 +8,9 @@ class QwenChatbot:
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.model = AutoModelForCausalLM.from_pretrained(
             model_name,
-            torch_dtype="auto",
+            torch_dtype=torch.bfloat16,
             device_map="auto",
-            quantization_config=BitsAndBytesConfig(load_in_8bit=True),  # 4GB 显存
+            # quantization_config=BitsAndBytesConfig(load_in_8bit=True),  # 4GB 显存
         )
         self.history = []   
 
@@ -26,7 +27,7 @@ class QwenChatbot:
 
         response_ids = self.model.generate(
             **inputs,
-            max_new_tokens=2048,  # 4GB 显存降低生成长度
+            max_new_tokens=512,  # 4GB 显存降低生成长度
         )[0][len(inputs.input_ids[0]):].tolist()
 
         response = self.tokenizer.decode(response_ids, skip_special_tokens=True)

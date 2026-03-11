@@ -86,13 +86,13 @@ for chunk in completion:
             print(delta.reasoning_content, end="", flush=True)
         # 处理最终回复内容
         else:
-            if not is_answering: # 首次进入回复阶段时打印
+            if not is_answering:  # 首次进入回复阶段时打印
                 is_answering = True
                 print("\n"+"="*20+"回复内容"+"="*20)
 
             if delta.content is not None:
                 answer_content += delta.content
-                print(delta.content, end="", flush=True) # 流式输出回复内容
+                print(delta.content, end="", flush=True)  # 流式输出回复内容
 
             # 处理工具调用信息
             if delta.tool_calls is not None:
