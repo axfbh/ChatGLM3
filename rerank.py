@@ -2,7 +2,7 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 
 tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased")
-model = AutoModelForSequenceClassification.from_pretrained("cross-encoder/ms-marco-MiniLM-L-6-v2")
+model = AutoModelForSequenceClassification.from_pretrained("cross-encoder/ms-marco-MiniLM-L6-v2")
 
 def rerank(query, documents):
     # 构造输入格式：[CLS] query [SEP] document [SEP]
@@ -10,14 +10,18 @@ def rerank(query, documents):
 
     with torch.no_grad():
         outputs = model(**inputs)
-        scores = torch.softmax(outputs.logits, dim=-1)[:,-1].tolist() #获得相关性得分
+        scores = torch.softmax(outputs.logits, dim=0)[:,-1].tolist() #获得相关性得分
 
     ranked_docs = sorted(zip(scores, documents), key=lambda x: x[0], reverse=True)
     return [(score, doc) for score, doc in ranked_docs]
 
 if __name__ == "__main__":
     query = "What is the capital of France?"
-    documents = ["Paris is the capital of France.", "Berlin is the capital of Germany."]
+    documents = [
+        "Paris is the capital of France.", 
+        "Berlin is the capital of Germany.",
+        "The Eiffel Tower is loacated in Paris."
+    ]
     reranked_docs = rerank(query, documents)
 
     print("Reranked documents:")
