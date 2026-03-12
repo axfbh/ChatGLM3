@@ -22,7 +22,6 @@ node/
 # VCS 与 IDE
 .git/
 .github/
-.gitignore
 .vscode/
 .idea/
 *.swp
