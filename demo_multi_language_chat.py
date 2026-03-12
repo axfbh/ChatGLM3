@@ -1,9 +1,13 @@
 """
 多语言对话微调脚本：基于 Qwen + LoRA 的对话数据微调。
 """
+# 在 fork（多进程 DataLoader / DDP）前禁用 tokenizers 内部并行，避免死锁与警告
+import os
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 import json
 import torch
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from tqdm import tqdm
 from datasets import Dataset
 from transformers import TrainingArguments, Trainer, DataCollatorForSeq2Seq
@@ -30,11 +34,18 @@ class TrainConfig:
     lora_target_modules: tuple = ("q_proj", "v_proj", "k_proj")
     modules_to_save: tuple = ("embed_tokens", "lm_head")
 
-    # 训练
-    per_device_train_batch_size: int = 8
+    # 训练（双卡 3090：每卡 batch=12，梯度累积 2，有效 batch=12×2×2=48）
+    per_device_train_batch_size: int = 12
+    gradient_accumulation_steps: int = 2
     learning_rate: float = 5e-5
-    num_train_epochs: int = 3
-    warmup_steps: int = 10
+    num_train_epochs: int = 5
+    warmup_ratio: float = 0.05  # 按总步数比例 warmup，比固定 steps 更合理
+    max_grad_norm: float = 1.0
+
+    # 日志与保存
+    logging_steps: int = 10
+    save_strategy: str = "epoch"
+    dataloader_num_workers: int = 4
 
 
 # ---------------------------------------------------------------------------
@@ -200,12 +211,19 @@ def main():
 
     training_args = TrainingArguments(
         per_device_train_batch_size=config.per_device_train_batch_size,
+        gradient_accumulation_steps=config.gradient_accumulation_steps,
         learning_rate=config.learning_rate,
         num_train_epochs=config.num_train_epochs,
-        warmup_steps=config.warmup_steps,
+        warmup_ratio=config.warmup_ratio,
+        max_grad_norm=config.max_grad_norm,
+        bf16=True,
+        logging_steps=config.logging_steps,
+        save_strategy=config.save_strategy,
         report_to="none",
         output_dir=config.output_dir,
         save_safetensors=True,
+        dataloader_num_workers=config.dataloader_num_workers,
+        ddp_find_unused_parameters=False,  # PEFT 多卡时建议关闭，避免 DDP 报错
     )
 
     trainer = Trainer(
