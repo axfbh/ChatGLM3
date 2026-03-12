@@ -1,18 +1,18 @@
 """
 多语言对话微调脚本：基于 Qwen + LoRA 的对话数据微调。
 """
-# 在 fork（多进程 DataLoader / DDP）前禁用 tokenizers 内部并行，避免死锁与警告
-import os
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
-import json
-import torch
-from dataclasses import dataclass
-from tqdm import tqdm
-from datasets import Dataset
-from transformers import TrainingArguments, Trainer, DataCollatorForSeq2Seq
-from peft import LoraConfig, get_peft_model
 from modelscope import AutoModelForCausalLM, AutoTokenizer
+from peft import LoraConfig, get_peft_model
+from transformers import TrainingArguments, Trainer, DataCollatorForSeq2Seq
+from datasets import Dataset
+from tqdm import tqdm
+from dataclasses import dataclass
+import torch
+import json
+import os
+
+# 在 fork（多进程 DataLoader / DDP）前禁用 tokenizers 内部并行，避免死锁与警告
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 # ---------------------------------------------------------------------------
@@ -179,6 +179,7 @@ def preprocess_function(examples: dict, tokenizer, max_length: int) -> dict:
     )
     for i, lbl in enumerate(examples["labels"]):
         labels[i, :len(lbl)] = torch.LongTensor(lbl[:max_length])
+
     return {
         "input_ids": tokenized["input_ids"],
         "attention_mask": tokenized["attention_mask"],
