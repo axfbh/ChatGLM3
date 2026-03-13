@@ -1,10 +1,5 @@
-import json
 import torch
-import safetensors.torch as safetorch
-from tqdm import tqdm
-from datasets import Dataset
-from transformers import TrainerArguments, Trainer, DataCollatorForSeq2Seq
-from peft import LoraConfig, get_peft_model, PeftModel
+from peft import PeftModel
 from modelscope import AutoModelForCausalLM, AutoTokenizer
 
 model_name = "Qwen/Qwen3-1.7B"
@@ -16,24 +11,24 @@ model = AutoModelForCausalLM.from_pretrained(
     model_name,
     torch_dtype=torch.bfloat16,
     device_map="auto",
-    use_cache=True,
+    use_cache=False  # 梯度检查点需要关闭cache
 )
 
-print("base model load successful!")
+print("base_model load successful!")
 
 model = PeftModel.from_pretrained(model, output_dir)
 
 messages = [
-    {"role": "user", "content": "我没收到货呢所以就想知道是哪里的问题？"}
+    {"role": "user", "content": "要买一把茶刀看到有零食就拍了点"}
 ]
 
 text = tokenizer.apply_chat_template(
     messages,
     tokenize=False,
-    add_generation_prompt=True,
+    add_generation_prompt=True
 )
 
-model_inputs = tokenizer(text, return_tensors="pt").to(model.device)
+model_inputs = tokenizer([text], return_tensors="pt").to(model.device)
 
 generated_ids = model.generate(
     **model_inputs,
