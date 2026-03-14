@@ -38,7 +38,7 @@ class TrainConfig:
     per_device_train_batch_size: int = 12
     gradient_accumulation_steps: int = 2
     learning_rate: float = 5e-5
-    num_train_epochs: int = 5
+    num_train_epochs: int = 10
     warmup_ratio: float = 0.05  # 按总步数比例 warmup，比固定 steps 更合理
     max_grad_norm: float = 1.0
 
@@ -97,18 +97,18 @@ def format_conversation(example: dict, tokenizer, max_length: int) -> dict | Non
     """带数据校验的对话格式处理"""
     messages = []
     prev_role = None
-
     for msg in example["conversations"]:
+        # 自动修正常见键名错误
+        role = _normalize_role(msg, prev_role)
+        prev_role = role
+    
         content = msg.get("content", "")
         # 跳过无效消息
         if len(content.strip()) < 1:
             continue
 
-        # 规范角色值
-        role = _normalize_role(msg, prev_role)
         messages.append({"role": role, "content": content})
-        prev_role = role
-
+        
     try:
         text = tokenizer.apply_chat_template(
             messages,
@@ -119,18 +119,28 @@ def format_conversation(example: dict, tokenizer, max_length: int) -> dict | Non
         print(f"Template error: {e}")
         return None
 
-    labels = []
-    for msg in messages:
-        content_ids = tokenizer.encode(
-            msg["content"],
-            add_special_tokens=False
-        )
-        if msg["role"] == "assistant":
-            labels.extend(content_ids + [tokenizer.eos_token_id])
-        else:
-            labels.extend([-100] * (len(content_ids) + 1))
+    inputs_ids = tokenizer.encode(text, add_special_tokens=False)
+    user_token_id = tokenizer.encode("user", add_special_tokens=False)[0]
+    assistant_token_id = tokenizer.encode("assistant", add_special_tokens=False)[0]
 
-    return {"text": text, "labels": labels[:max_length]} if text else None
+    labels = [-100] * len(inputs_ids)
+    current_role = None
+    for i, tid in enumerate(inputs_ids):
+        prev_tid = inputs_ids[i - 1] if i > 0 else None
+
+        if tid == user_token_id:  # user 标签不计算损失
+            current_role = "user"
+        elif tid == assistant_token_id:  # assistant 标签不计算损失
+            current_role = "assistant"
+        elif prev_tid in [user_token_id, assistant_token_id]:  # user或assistant后的 \n 标签不计算损失
+            continue
+        elif current_role == "assistant" and tid == tokenizer.eos_token_id:  # end 标签计算损失
+            labels[i] = tid
+            current_role = None
+        elif current_role == "assistant":
+            labels[i] = tid
+
+    return {'text': text, 'labels': labels[:max_length]} if text else None
 
 
 def load_dataset(path: str, tokenizer, max_length: int) -> Dataset:
@@ -172,6 +182,7 @@ def preprocess_function(examples: dict, tokenizer, max_length: int) -> dict:
         padding="max_length",
         return_tensors="pt",
     )
+
     labels = torch.full(
         (len(examples["text"]), max_length),
         fill_value=-100,
@@ -201,7 +212,7 @@ def main():
         lambda x: preprocess_function(x, tokenizer, config.max_length),
         batched=True,
         batch_size=32,
-        remove_columns=["text", "labels"],
+        remove_columns=dataset.column_names
     )
 
     data_collator = DataCollatorForSeq2Seq(
