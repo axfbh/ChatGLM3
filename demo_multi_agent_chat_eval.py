@@ -19,7 +19,7 @@ print("base_model load successful!")
 model = PeftModel.from_pretrained(model, output_dir)
 
 messages = [
-    {"role": "user", "content": "我没收到货呢所以就想知道是哪里的问题?"}
+    {"role": "user", "content": "我没收到货呢所以就想知道是哪里的问题？"}
 ]
 
 text = tokenizer.apply_chat_template(
