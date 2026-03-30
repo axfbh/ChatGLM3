@@ -128,17 +128,16 @@ def format_conversation(example: dict, tokenizer, max_length: int) -> dict | Non
     for i, tid in enumerate(inputs_ids):
         prev_tid = inputs_ids[i - 1] if i > 0 else None
 
-        if tid == user_token_id:  # user 标签不计算损失
-            current_role = "user"
-        elif tid == assistant_token_id:  # assistant 标签不计算损失
+        if tid == assistant_token_id:  # assistant 标签不计算损失
             current_role = "assistant"
-        elif prev_tid in [user_token_id, assistant_token_id]:  # user或assistant后的 \n 标签不计算损失
+        elif prev_tid == assistant_token_id:  # assistant后的 \n 标签不计算损失
             continue
-        elif current_role == "assistant" and tid == tokenizer.eos_token_id:  # end 标签计算损失
+        elif current_role == "assistant": 
             labels[i] = tid
-            current_role = None
-        elif current_role == "assistant":
-            labels[i] = tid
+
+            if  tid == tokenizer.eos_token_id:  #assistant的 end 标签后，更改current_role为状态
+                current_role = None
+                
 
     return {'text': text, 'labels': labels[:max_length]} if text else None
 
