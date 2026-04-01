@@ -120,7 +120,6 @@ def format_conversation(example: dict, tokenizer, max_length: int) -> dict | Non
         return None
 
     inputs_ids = tokenizer.encode(text, add_special_tokens=False)
-    user_token_id = tokenizer.encode("user", add_special_tokens=False)[0]
     assistant_token_id = tokenizer.encode("assistant", add_special_tokens=False)[0]
 
     labels = [-100] * len(inputs_ids)

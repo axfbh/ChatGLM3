@@ -8,3 +8,6 @@
 /qwen_lora_finetuned
 /.vscode
 /__pycache__
+/TencentBAC
+/data/conversation_dataset.jsonl
+/data/phone.txt

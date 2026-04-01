@@ -47,7 +47,8 @@ def chat():
             text = tokenizer.apply_chat_template(
                 messages,
                 tokenize=False,
-                add_generation_prompt=True
+                add_generation_prompt=True,
+                enable_thinking=False,
             )
 
             # 编码输入（增加长度校验）[[3]]
