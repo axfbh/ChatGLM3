@@ -11,3 +11,4 @@
 /TencentBAC
 /data/conversation_dataset.jsonl
 /data/phone.txt
+/.venv-fixtest
